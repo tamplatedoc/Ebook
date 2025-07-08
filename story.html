@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Detail Cerita</title>
   <link rel="icon" href="favicon.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #4caf50; /* Hijau Muda */
-      --secondary: #2196f3; /* Biru */
-      --dark: #1a1a2e;
-      --light: #fef6fb;
+      --primary: #ff1744; /* Merah */
+      --secondary: #9c27b0; /* Ungu */
+      --tertiary: #1976d2; /* Biru Tua */
+      --light: #ffffff; /* Putih */
+      --border-color: #ff5252; /* Merah Menyala */
       --border-radius: 12px;
     }
 
@@ -18,11 +20,11 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Roboto', sans-serif; /* Menggunakan font Roboto */
     }
 
     body {
-      background: linear-gradient(to bottom right, var(--primary), var(--secondary));
+      background: linear-gradient(to bottom right, var(--primary), var(--secondary), var(--tertiary));
       color: var(--light);
       min-height: 100vh;
       display: flex;
@@ -49,7 +51,8 @@
       background: rgba(26, 26, 46, 0.85);
       padding: 2rem;
       border-radius: var(--border-radius);
-      box-shadow: 0 0 15px var(--primary);
+      box-shadow: 0 0 15px var(--border-color);
+      border: 2px solid var(--border-color);
     }
 
     .story-image {
@@ -58,13 +61,21 @@
       max-width: 300px;
       margin: 1rem auto;
       border-radius: var(--border-radius);
-      box-shadow: 0 0 15px var(--primary);
+      box-shadow: 0 0 15px var(--border-color);
     }
 
     .story-content {
       font-size: 1.1rem;
       text-align: justify;
       margin-bottom: 1.5rem;
+    }
+
+    .genre {
+      text-align: center;
+      font-style: italic;
+      margin: 1rem 0;
+      font-size: 1.2rem;
+      color: var(--light);
     }
 
     .rating {
@@ -113,7 +124,7 @@
     }
 
     footer a {
-      color: var(--primary);
+      color: var(--light);
       text-decoration: none;
       margin: 0 0.5rem;
     }
@@ -138,7 +149,7 @@
       background: linear-gradient(to right, var(--primary), var(--secondary));
       border: none;
       border-radius: var(--border-radius);
-      color: white;
+      color: var(--light);
       font-weight: 600;
       cursor: pointer;
       transition: 0.3s;
@@ -146,7 +157,7 @@
 
     button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 10px var(--primary);
+      box-shadow: 0 4px 10px var(--border-color);
     }
 
     .back-button {
@@ -157,7 +168,7 @@
       padding: 0.6rem 1.2rem;
       background: var(--primary);
       border-radius: var(--border-radius);
-      color: white;
+      color: var(--light);
       font-weight: 600;
       transition: 0.3s;
     }
@@ -187,8 +198,10 @@
   </header>
   <div class="container">
     <img class="story-image" id="gambar-cerita" src="" alt="Cover Cerita">
-    <div class="meta" id="meta-info"></div>
+    <div class="genre" id="meta-info">Genre: Memuat...</div>
     <div class="story-content" id="isi-cerita">Sedang memuat isi cerita...</div>
+
+    <button id="tts-button">Dengarkan Cerita</button>
 
     <section class="rating">
       <h3>⭐ Rating</h3>
@@ -248,7 +261,7 @@
 
       document.getElementById("judul-cerita").textContent = data.judul;
       document.getElementById("gambar-cerita").src = data.gambarUrl || "";
-      document.getElementById("meta-info").textContent = `${data.genre}`;
+      document.getElementById("meta-info").textContent = `Genre: ${data.genre}`;
       document.getElementById("isi-cerita").textContent = data.isi;
 
       // update view count
@@ -320,6 +333,12 @@
       ref.set({ teks, waktu: Date.now() });
       document.getElementById("input-komentar").value = "";
     }
+
+    // Fungsi untuk TTS
+    document.getElementById("tts-button").addEventListener("click", () => {
+      const utterance = new SpeechSynthesisUtterance(document.getElementById("isi-cerita").textContent);
+      speechSynthesis.speak(utterance);
+    });
 
     tampilkanCerita();
   </script>
