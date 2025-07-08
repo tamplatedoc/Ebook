@@ -6,138 +6,125 @@
   <title>Detail Cerita</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <style>
-    body { font-family: 'Poppins', sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
-    header, footer { text-align: center; padding: 10px; background: #1a1a1a; }
- :root {
-  --primary: #ff6b9e;
-  --secondary: #a18aff;
-  --dark: #1a1a2e;
-  --light: #fef6fb;
-}
+    :root {
+      --primary: #ff6b9e;
+      --secondary: #a18aff;
+      --dark: #1a1a2e;
+      --light: #fef6fb;
+    }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
 
-body {
-  background-color: var(--dark);
-  color: var(--light);
-  min-height: 100vh;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-}
+    body {
+      background-color: var(--dark);
+      color: var(--light);
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
 
-.container {
-  max-width: 800px;
-  margin: auto;
-  background: rgba(26, 26, 46, 0.85);
-  padding: 1.5rem;
-  border-radius: 16px;
-  box-shadow: 0 0 15px var(--primary);
-}
+    header, footer {
+      text-align: center;
+      padding: 10px;
+      background: #1a1a1a;
+    }
 
-h1 {
-  font-size: 2rem;
-  text-align: center;
-  background: linear-gradient(to right, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  color: transparent;
-  margin-bottom: 0.5rem;
-}
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: rgba(26, 26, 46, 0.85);
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 0 15px var(--primary);
+    }
 
-.genre {
-  text-align: center;
-  font-style: italic;
-  margin-bottom: 1rem;
-}
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
 
-.story-image {
-  display: block;
-  width: 100%;
-  max-width: 300px;
-  margin: 1rem auto;
-  border-radius: 12px;
-  box-shadow: 0 0 15px var(--primary);
-}
+    .genre {
+      text-align: center;
+      font-style: italic;
+      margin-bottom: 1rem;
+    }
 
-.story-content {
-  font-size: 1rem;
-  text-align: justify;
-  margin-bottom: 1.5rem;
-}
+    .story-image {
+      display: block;
+      width: 100%;
+      max-width: 300px;
+      margin: 1rem auto;
+      border-radius: 12px;
+      box-shadow: 0 0 15px var(--primary);
+    }
 
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-}
+    .story-content {
+      font-size: 1rem;
+      text-align: justify;
+      margin-bottom: 1.5rem;
+    }
 
-.btn {
-  padding: 0.6rem 1.2rem;
-  background: linear-gradient(to right, var(--primary), var(--secondary));
-  border: none;
-  border-radius: 50px;
-  color: white;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: 0.3s;
-  text-align: center;
-}
+    .star-rating {
+      display: flex;
+      justify-content: center;
+      cursor: pointer;
+    }
 
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px var(--primary);
-}
+    .star {
+      font-size: 2rem;
+      color: #ff6b9e; /* Warna bintang */
+      margin: 0 0.1rem;
+      transition: color 0.3s;
+    }
 
-.comment-rating {
-  margin-top: 1rem;
-}
+    .star:hover,
+    .star.selected {
+      color: #ffcc00; /* Warna saat hover atau terpilih */
+    }
 
-.comment-rating textarea {
-  width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  border-radius: 8px;
-  border: none;
-}
+    .comment-rating {
+      margin-top: 1rem;
+    }
 
-.comment-rating input[type="number"] {
-  width: 100px;
-  padding: 0.3rem;
-  margin-bottom: 0.5rem;
-  border-radius: 8px;
-  border: none;
-}
+    .comment-rating textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      border: none;
+    }
 
-.comment-item {
-  border-bottom: 1px solid #555;
-  padding: 0.3rem 0;
-}
+    .comment-item {
+      border-bottom: 1px solid #555;
+      padding: 0.3rem 0;
+    }
 
-footer {
-  text-align: center;
-  font-size: 0.9rem;
-  margin-top: auto;
-  padding: 1rem 0 0.5rem;
-}
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-top: auto;
+      padding: 1rem 0 0.5rem;
+    }
 
-footer a {
-  color: var(--primary);
-  text-decoration: none;
-  margin: 0 0.5rem;
-}
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+      margin: 0 0.5rem;
+    }
 
-footer a:hover {
-  text-decoration: underline;
-}
-
+    footer a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -152,9 +139,13 @@ footer a:hover {
     <section class="rating">
       <h3>⭐ Rating</h3>
       <div id="rating-info">Memuat...</div>
-      <label for="input-rating">Beri rating (1-5):</label>
-      <input type="number" id="input-rating" min="1" max="5">
-      <button onclick="submitRating()">Kirim</button>
+      <div class="star-rating">
+        <span class="star" data-value="1">★</span>
+        <span class="star" data-value="2">★</span>
+        <span class="star" data-value="3">★</span>
+        <span class="star" data-value="4">★</span>
+        <span class="star" data-value="5">★</span>
+      </div>
     </section>
 
     <section class="komentar">
@@ -237,9 +228,27 @@ footer a:hover {
       });
     }
 
-    function submitRating() {
-      const nilai = parseInt(document.getElementById("input-rating").value);
-      if (isNaN(nilai) || nilai < 1 || nilai > 5) return alert("Masukkan rating antara 1 sampai 5");
+    const stars = document.querySelectorAll('.star');
+
+    stars.forEach(star => {
+      star.addEventListener('click', () => {
+        const rating = star.getAttribute('data-value');
+        submitRating(rating);
+        highlightStars(rating);
+      });
+    });
+
+    function highlightStars(rating) {
+      stars.forEach(star => {
+        star.classList.remove('selected');
+        if (star.getAttribute('data-value') <= rating) {
+          star.classList.add('selected');
+        }
+      });
+    }
+
+    function submitRating(rating) {
+      const nilai = parseInt(rating);
       const ref = realtimeDB.ref(`rating/${id}`);
       ref.transaction(data => {
         if (data === null) return { total: nilai, jumlah: 1 };
