@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Cerita</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <style>
+    body { font-family: 'Poppins', sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+    header, footer { text-align: center; padding: 10px; background: #1a1a1a; }
+    h1 { color: #00bfa5; }
+    img.cover { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; border-radius: 8px; }
+    .meta { text-align: center; margin: 10px 0; font-size: 0.9rem; color: #aaa; }
+    .isi { margin-top: 20px; line-height: 1.6; white-space: pre-wrap; }
+    .rating, .komentar { margin-top: 40px; }
+    .komentar form textarea { width: 100%; padding: 10px; border-radius: 6px; border: none; resize: vertical; }
+    .komentar form button { margin-top: 10px; padding: 8px 16px; background: #00bfa5; border: none; border-radius: 6px; color: white; cursor: pointer; }
+    .komentar-list { margin-top: 20px; }
+    .komentar-item { margin-bottom: 12px; padding: 10px; background: #1f1f1f; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="judul-cerita">Loading...</h1>
+  </header>
+  <main>
+    <img class="cover" id="gambar-cerita" src="" alt="Cover Cerita">
+    <div class="meta" id="meta-info"></div>
+    <div class="isi" id="isi-cerita">Sedang memuat isi cerita...</div>
+
+    <section class="rating">
+      <h3>⭐ Rating</h3>
+      <div id="rating-info">Memuat...</div>
+      <label for="input-rating">Beri rating (1-5):</label>
+      <input type="number" id="input-rating" min="1" max="5">
+      <button onclick="submitRating()">Kirim</button>
+    </section>
+
+    <section class="komentar">
+      <h3>💬 Komentar</h3>
+      <form onsubmit="submitKomentar(event)">
+        <textarea id="input-komentar" rows="3" placeholder="Tulis komentarmu..."></textarea>
+        <br>
+        <button type="submit">Kirim Komentar</button>
+      </form>
+      <div class="komentar-list" id="komentar-list"></div>
+    </section>
+  </main>
+  <footer>
+    &copy; 2024 Perpustakaan Digital
+  </footer>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDeiLybtGc6evATj5O7M1FiJd1GPYd-rYc",
+      authDomain: "tamplatedoc.firebaseapp.com",
+      databaseURL: "https://tamplatedoc-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "tamplatedoc",
+      storageBucket: "tamplatedoc.appspot.com",
+      messagingSenderId: "264966107720",
+      appId: "1:264966107720:web:868abe93cdff209040de7d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const firestore = firebase.firestore();
+    const realtimeDB = firebase.database();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+    if (!id) alert("ID cerita tidak ditemukan di URL");
+
+    async function tampilkanCerita() {
+      const doc = await firestore.collection("koleksi").doc(id).get();
+      if (!doc.exists) return;
+      const data = doc.data();
+
+      document.getElementById("judul-cerita").textContent = data.judul;
+      document.getElementById("gambar-cerita").src = data.gambarUrl || "";
+      document.getElementById("meta-info").textContent = `${data.genre}`;
+      document.getElementById("isi-cerita").textContent = data.isi;
+
+      // update view count
+      const viewsRef = realtimeDB.ref(`cerita/${id}/views`);
+      viewsRef.transaction(val => (val || 0) + 1);
+
+      // ambil rating
+      const ratingRef = realtimeDB.ref(`rating/${id}`);
+      ratingRef.once('value', snap => {
+        const val = snap.val();
+        if (val && val.total && val.jumlah) {
+          const avg = (val.total / val.jumlah).toFixed(1);
+          document.getElementById("rating-info").textContent = `${avg} dari ${val.jumlah} rating`;
+        } else {
+          document.getElementById("rating-info").textContent = "Belum ada rating";
+        }
+      });
+
+      // tampilkan komentar
+      realtimeDB.ref(`komentar/${id}`).on('value', snap => {
+        const komentarList = document.getElementById("komentar-list");
+        komentarList.innerHTML = "";
+        const data = snap.val();
+        if (data) {
+          Object.values(data).forEach(k => {
+            const div = document.createElement("div");
+            div.className = "komentar-item";
+            div.textContent = k.teks || "";
+            komentarList.appendChild(div);
+          });
+        }
+      });
+    }
+
+    function submitRating() {
+      const nilai = parseInt(document.getElementById("input-rating").value);
+      if (isNaN(nilai) || nilai < 1 || nilai > 5) return alert("Masukkan rating antara 1 sampai 5");
+      const ref = realtimeDB.ref(`rating/${id}`);
+      ref.transaction(data => {
+        if (data === null) return { total: nilai, jumlah: 1 };
+        return { total: (data.total || 0) + nilai, jumlah: (data.jumlah || 0) + 1 };
+      });
+      alert("Rating berhasil dikirim");
+    }
+
+    function submitKomentar(e) {
+      e.preventDefault();
+      const teks = document.getElementById("input-komentar").value.trim();
+      if (!teks) return;
+      const ref = realtimeDB.ref(`komentar/${id}`).push();
+      ref.set({ teks, waktu: Date.now() });
+      document.getElementById("input-komentar").value = "";
+    }
+
+    tampilkanCerita();
+  </script>
+</body>
+</html>
