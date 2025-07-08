@@ -7,10 +7,11 @@
   <link rel="icon" href="favicon.png" type="image/png">
   <style>
     :root {
-      --primary: #ff6b9e;
-      --secondary: #a18aff;
+      --primary: #4caf50; /* Hijau Muda */
+      --secondary: #2196f3; /* Biru */
       --dark: #1a1a2e;
       --light: #fef6fb;
+      --border-radius: 12px;
     }
 
     * {
@@ -21,42 +22,34 @@
     }
 
     body {
-      background-color: var(--dark);
+      background: linear-gradient(to bottom right, var(--primary), var(--secondary));
       color: var(--light);
       min-height: 100vh;
-      padding: 1rem;
       display: flex;
       flex-direction: column;
+      padding: 20px;
     }
 
-    header, footer {
+    header {
       text-align: center;
-      padding: 10px;
-      background: #1a1a1a;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 10px;
     }
 
     .container {
       max-width: 800px;
       margin: auto;
       background: rgba(26, 26, 46, 0.85);
-      padding: 1.5rem;
-      border-radius: 16px;
+      padding: 2rem;
+      border-radius: var(--border-radius);
       box-shadow: 0 0 15px var(--primary);
-    }
-
-    h1 {
-      font-size: 2rem;
-      text-align: center;
-      background: linear-gradient(to right, var(--primary), var(--secondary));
-      -webkit-background-clip: text;
-      color: transparent;
-      margin-bottom: 0.5rem;
-    }
-
-    .genre {
-      text-align: center;
-      font-style: italic;
-      margin-bottom: 1rem;
     }
 
     .story-image {
@@ -64,14 +57,19 @@
       width: 100%;
       max-width: 300px;
       margin: 1rem auto;
-      border-radius: 12px;
+      border-radius: var(--border-radius);
       box-shadow: 0 0 15px var(--primary);
     }
 
     .story-content {
-      font-size: 1rem;
+      font-size: 1.1rem;
       text-align: justify;
       margin-bottom: 1.5rem;
+    }
+
+    .rating {
+      text-align: center;
+      margin: 1.5rem 0;
     }
 
     .star-rating {
@@ -82,38 +80,36 @@
 
     .star {
       font-size: 2rem;
-      color: #ff6b9e; /* Warna bintang */
+      color: #ffcc00; /* Warna bintang */
       margin: 0 0.1rem;
       transition: color 0.3s;
     }
 
     .star:hover,
     .star.selected {
-      color: #ffcc00; /* Warna saat hover atau terpilih */
+      color: #ffcc00;
     }
 
-    .comment-rating {
+    .komentar {
+      margin-top: 2rem;
+    }
+
+    .komentar-list {
       margin-top: 1rem;
+      border-top: 1px solid #555;
+      padding-top: 1rem;
     }
 
-    .comment-rating textarea {
-      width: 100%;
-      padding: 0.5rem;
-      margin-bottom: 0.5rem;
-      border-radius: 8px;
-      border: none;
-    }
-
-    .comment-item {
+    .komentar-item {
       border-bottom: 1px solid #555;
-      padding: 0.3rem 0;
+      padding: 0.5rem 0;
     }
 
     footer {
       text-align: center;
       font-size: 0.9rem;
       margin-top: auto;
-      padding: 1rem 0 0.5rem;
+      padding: 1rem 0;
     }
 
     footer a {
@@ -125,16 +121,74 @@
     footer a:hover {
       text-decoration: underline;
     }
+
+    /* Form styling */
+    textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-radius: var(--border-radius);
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--light);
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      border: none;
+      border-radius: var(--border-radius);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px var(--primary);
+    }
+
+    .back-button {
+      display: inline-block;
+      margin: 1rem 0;
+      text-align: center;
+      text-decoration: none;
+      padding: 0.6rem 1.2rem;
+      background: var(--primary);
+      border-radius: var(--border-radius);
+      color: white;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .back-button:hover {
+      background: var(--secondary);
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      .story-content {
+        font-size: 1rem;
+      }
+
+      .star {
+        font-size: 1.5rem;
+      }
+    }
   </style>
 </head>
 <body>
   <header>
     <h1 id="judul-cerita">Loading...</h1>
   </header>
-  <main>
-    <img class="cover" id="gambar-cerita" src="" alt="Cover Cerita">
+  <div class="container">
+    <img class="story-image" id="gambar-cerita" src="" alt="Cover Cerita">
     <div class="meta" id="meta-info"></div>
-    <div class="isi" id="isi-cerita">Sedang memuat isi cerita...</div>
+    <div class="story-content" id="isi-cerita">Sedang memuat isi cerita...</div>
 
     <section class="rating">
       <h3>⭐ Rating</h3>
@@ -152,12 +206,13 @@
       <h3>💬 Komentar</h3>
       <form onsubmit="submitKomentar(event)">
         <textarea id="input-komentar" rows="3" placeholder="Tulis komentarmu..."></textarea>
-        <br>
         <button type="submit">Kirim Komentar</button>
       </form>
       <div class="komentar-list" id="komentar-list"></div>
     </section>
-  </main>
+
+    <a href="index.html" class="back-button">Kembali ke Beranda</a>
+  </div>
   <footer>
     &copy; 2024 Perpustakaan Digital
   </footer>
