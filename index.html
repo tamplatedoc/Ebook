@@ -1,201 +1,91 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Koleksi Cerita - Perpustakaan Digital</title>
-  <link rel="icon" href="favicon.png" type="image/png">
-  <style>/* Gaya CSS tetap seperti yang sudah kamu buat */</style>
-</head>
-<body>
-  <header>
-    <div class="logo" id="logo-text">Koleksi Cerita</div>
-    <nav class="search-container">
-      <input type="search" id="search-input" placeholder="Cari judul atau genre...">
-      <div id="genre-dropdown" class="genre-dropdown"></div>
-    </nav>
-    <select id="language-select">
-      <option value="id" selected>Bahasa Indonesia</option>
-      <option value="en">English</option>
-    </select>
-  </header>
-  <main>
-    <h1 id="main-title">Koleksi Cerita</h1>
-    <section id="cerita-grid"></section>
-    <div id="loading-indicator">Memuat cerita...</div>
-  </main>
-  <footer id="footer-text">
-    <div>
-      <a href="about.html">📖 Tentang</a>
-      <a href="privacy.html">🔒 Kebijakan Privasi</a>
-      <a href="contact.html">☎️ Kontak</a>
-      <a href="disclaimer.html">⚠️ Disclaimer</a>
-      <a href="compress.html">📷 Compress</a>
-    </div>
-    &copy; 2024 Perpustakaan Digital - Semua hak cipta dilindungi.
-  </footer>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Katalog Cerita | AMDF.GROUP</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref as dbRef, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getStorage, ref as storageRef, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
-  <div id="tts-warning">⚠️ Aktifkan TTS bahasa Indonesia di pengaturan perangkat Anda.</div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDeiLybtGc6evATj5O7M1FiJd1GPYd-rYc",
       authDomain: "tamplatedoc.firebaseapp.com",
       databaseURL: "https://tamplatedoc-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "tamplatedoc",
-      storageBucket: "tamplatedoc.appspot.com",
+      storageBucket: "tamplatedoc.firebasestorage.app",
       messagingSenderId: "264966107720",
-      appId: "1:264966107720:web:868abe93cdff209040de7d"
+      appId: "1:264966107720:web:da19f6109e71390740de7d",
+      measurementId: "G-PFK8VQBFCV"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const firestore = firebase.firestore();
-    const realtimeDB = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const firestore = getFirestore(app);
+    const storage = getStorage(app);
 
-    const texts = {
-      id: {
-        logo: "Koleksi Cerita",
-        mainTitle: "Koleksi Cerita",
-        searchPlaceholder: "Cari judul atau genre...",
-        loading: "Memuat cerita...",
-        read: "Baca Cerita",
-        views: "dilihat",
-        tts: "⚠️ Aktifkan TTS bahasa Indonesia di pengaturan perangkat Anda."
-      },
-      en: {
-        logo: "Story Collection",
-        mainTitle: "Story Collection",
-        searchPlaceholder: "Search title or genre...",
-        loading: "Loading stories...",
-        read: "Read Story",
-        views: "views",
-        tts: "⚠️ Enable Indonesian TTS in your device settings."
-      }
-    };
+    async function loadStories() {
+      const container = document.getElementById("catalog");
+      const snapshot = await getDocs(collection(firestore, "cerita"));
 
-    const state = {
-      semuaCerita: [],
-      filteredCerita: [],
-      currentLang: 'id',
-      isLoading: false,
-      allDataLoaded: false,
-      allGenres: [],
-      currentIndex: 0
-    };
-
-    function debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
-    }
-
-    function showLoading(show) {
-      document.getElementById('loading-indicator').style.display = show ? 'block' : 'none';
-    }
-
-    function extractGenres(ceritaList) {
-      const genreSet = new Set();
-      ceritaList.forEach(cerita => {
-        if (cerita.genre) {
-          cerita.genre.split(',').map(g => g.trim()).forEach(g => genreSet.add(g));
-        }
-      });
-      state.allGenres = Array.from(genreSet).sort();
-      renderGenreDropdown();
-    }
-
-    function renderGenreDropdown() {
-      const genreList = document.getElementById('genre-dropdown');
-      genreList.innerHTML = '';
-
-      state.allGenres.forEach(genre => {
-        const genreItem = document.createElement('div');
-        genreItem.className = 'genre-item';
-        genreItem.textContent = genre;
-        genreItem.onclick = () => {
-          document.getElementById('search-input').value = genre;
-          filterCerita(genre);
-        };
-        genreList.appendChild(genreItem);
-      });
-    }
-
-    function filterCerita(query) {
-      const q = query.trim().toLowerCase();
-      state.filteredCerita = state.semuaCerita.filter(c =>
-        c.judul.toLowerCase().includes(q) || c.genre.toLowerCase().includes(q)
-      );
-      renderCeritaBatch();
-    }
-
-    function renderCeritaBatch() {
-      const grid = document.getElementById("cerita-grid");
-      grid.innerHTML = '';
-      state.filteredCerita.forEach(cerita => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <img src="${cerita.gambarUrl}" alt="Cover ${cerita.judul}">
-          <h2>${cerita.judul}</h2>
-          <div class="genre">${cerita.genre}</div>
-          <div class="rating">⭐ ${cerita.rating.toFixed(1)}</div>
-          <div class="views">👁 ${cerita.views} ${texts[state.currentLang].views}</div>
-          <a href="story.html?id=${cerita.id}" class="read-button">${texts[state.currentLang].read}</a>
-        `;
-        grid.appendChild(card);
-      });
-    }
-
-    async function loadCerita() {
-      const snapshot = await firestore.collection("koleksi").get();
-      const ceritaPromises = snapshot.docs.map(async doc => {
+      for (const doc of snapshot.docs) {
         const data = doc.data();
-        const id = doc.id;
-        const ratingSnap = await realtimeDB.ref(`rating/${id}`).once('value');
-        const viewSnap = await realtimeDB.ref(`cerita/${id}/views`).once('value');
+        const viewsSnap = await new Promise((resolve) => {
+          onValue(dbRef(db, `view/${doc.id}`), (snap) => {
+            resolve(snap.exists() ? snap.val() : 0);
+          }, { onlyOnce: true });
+        });
 
-        return {
-          id,
-          judul: data.judul,
-          genre: data.genre,
-          gambarUrl: data.gambarUrl || '',
-          rating: (ratingSnap.val() && ratingSnap.val().jumlah) || 0,
-          views: viewSnap.val() || 0
-        };
-      });
-      state.semuaCerita = await Promise.all(ceritaPromises);
-      state.filteredCerita = [...state.semuaCerita];
-      extractGenres(state.semuaCerita);
-      renderCeritaBatch();
+        const ratingsSnap = await new Promise((resolve) => {
+          onValue(dbRef(db, `rating/${doc.id}`), (snap) => {
+            if (!snap.exists()) return resolve(0);
+            const ratings = Object.values(snap.val());
+            const avg = ratings.reduce((a, b) => a + Number(b), 0) / ratings.length;
+            resolve(avg.toFixed(1));
+          }, { onlyOnce: true });
+        });
+
+        const thumbURL = await getDownloadURL(storageRef(storage, `thumb/${doc.id}.webp`));
+
+        const card = document.createElement("div");
+        card.className = "bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 w-full max-w-xs m-2 cursor-pointer transition hover:scale-105";
+        card.innerHTML = `
+          <img src="${thumbURL}" class="rounded-lg w-full h-40 object-cover" alt="Thumbnail">
+          <h3 class="text-lg font-bold mt-2 dark:text-white">${data.judul}</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300">${data.penulis}</p>
+          <div class="flex justify-between items-center text-sm mt-1 text-gray-500 dark:text-gray-400">
+            <span>👁 ${viewsSnap}</span>
+            <span>⭐ ${ratingsSnap}</span>
+          </div>
+        `;
+        card.onclick = () => location.href = `story.html?id=${doc.id}`;
+        container.appendChild(card);
+      }
     }
 
-    document.getElementById('search-input').addEventListener('input', debounce((e) => {
-      filterCerita(e.target.value);
-    }, 300));
-
-    document.getElementById('language-select').addEventListener('change', (e) => {
-      state.currentLang = e.target.value;
-      document.getElementById('logo-text').textContent = texts[state.currentLang].logo;
-      document.getElementById('main-title').textContent = texts[state.currentLang].mainTitle;
-      document.getElementById('search-input').placeholder = texts[state.currentLang].searchPlaceholder;
-      document.getElementById('loading-indicator').textContent = texts[state.currentLang].loading;
-      document.getElementById('tts-warning').textContent = texts[state.currentLang].tts;
-      renderCeritaBatch();
-    });
-
-    loadCerita();
+    loadStories();
   </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; transition: background 0.3s ease; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-100 to-white dark:from-gray-900 dark:to-gray-800 min-h-screen text-gray-900 dark:text-white">
+  <div class="max-w-4xl mx-auto py-6 px-4">
+    <header class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold">Koleksi Cerita</h1>
+      <div>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="px-2 py-1 bg-indigo-600 text-white rounded">Mode</button>
+        <a href="login.html" class="ml-2 text-indigo-700 dark:text-indigo-300 underline">Login/Daftar</a>
+      </div>
+    </header>
+    <p class="text-sm mb-6">Baca cerita gratis tanpa login. Jika ingin menjadi penulis, silakan login terlebih dahulu.</p>
+    <div id="catalog" class="flex flex-wrap justify-center"></div>
+    <footer class="mt-10 text-center text-xs text-gray-500 dark:text-gray-400">
+      &copy; 2025 AMDF.GROUP &bull; <a href="#about" class="underline">About</a> &bull; <a href="#privacy" class="underline">Privacy</a>
+    </footer>
+  </div>
 </body>
 </html>
