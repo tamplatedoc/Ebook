@@ -1,201 +1,1084 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Koleksi Cerita - Perpustakaan Digital</title>
-  <link rel="icon" href="favicon.png" type="image/png">
-  <style>/* Gaya CSS tetap seperti yang sudah kamu buat */</style>
-</head>
-<body>
-  <header>
-    <div class="logo" id="logo-text">Koleksi Cerita</div>
-    <nav class="search-container">
-      <input type="search" id="search-input" placeholder="Cari judul atau genre...">
-      <div id="genre-dropdown" class="genre-dropdown"></div>
-    </nav>
-    <select id="language-select">
-      <option value="id" selected>Bahasa Indonesia</option>
-      <option value="en">English</option>
-    </select>
-  </header>
-  <main>
-    <h1 id="main-title">Koleksi Cerita</h1>
-    <section id="cerita-grid"></section>
-    <div id="loading-indicator">Memuat cerita...</div>
-  </main>
-  <footer id="footer-text">
-    <div>
-      <a href="about.html">📖 Tentang</a>
-      <a href="privacy.html">🔒 Kebijakan Privasi</a>
-      <a href="contact.html">☎️ Kontak</a>
-      <a href="disclaimer.html">⚠️ Disclaimer</a>
-      <a href="compress.html">📷 Compress</a>
-    </div>
-    &copy; 2024 Perpustakaan Digital - Semua hak cipta dilindungi.
-  </footer>
-
-  <div id="tts-warning">⚠️ Aktifkan TTS bahasa Indonesia di pengaturan perangkat Anda.</div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDeiLybtGc6evATj5O7M1FiJd1GPYd-rYc",
-      authDomain: "tamplatedoc.firebaseapp.com",
-      databaseURL: "https://tamplatedoc-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "tamplatedoc",
-      storageBucket: "tamplatedoc.appspot.com",
-      messagingSenderId: "264966107720",
-      appId: "1:264966107720:web:868abe93cdff209040de7d"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const firestore = firebase.firestore();
-    const realtimeDB = firebase.database();
-
-    const texts = {
-      id: {
-        logo: "Koleksi Cerita",
-        mainTitle: "Koleksi Cerita",
-        searchPlaceholder: "Cari judul atau genre...",
-        loading: "Memuat cerita...",
-        read: "Baca Cerita",
-        views: "dilihat",
-        tts: "⚠️ Aktifkan TTS bahasa Indonesia di pengaturan perangkat Anda."
-      },
-      en: {
-        logo: "Story Collection",
-        mainTitle: "Story Collection",
-        searchPlaceholder: "Search title or genre...",
-        loading: "Loading stories...",
-        read: "Read Story",
-        views: "views",
-        tts: "⚠️ Enable Indonesian TTS in your device settings."
-      }
-    };
-
-    const state = {
-      semuaCerita: [],
-      filteredCerita: [],
-      currentLang: 'id',
-      isLoading: false,
-      allDataLoaded: false,
-      allGenres: [],
-      currentIndex: 0
-    };
-
-    function debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
-    }
-
-    function showLoading(show) {
-      document.getElementById('loading-indicator').style.display = show ? 'block' : 'none';
-    }
-
-    function extractGenres(ceritaList) {
-      const genreSet = new Set();
-      ceritaList.forEach(cerita => {
-        if (cerita.genre) {
-          cerita.genre.split(',').map(g => g.trim()).forEach(g => genreSet.add(g));
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katalog Ebook Open Source</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      });
-      state.allGenres = Array.from(genreSet).sort();
-      renderGenreDropdown();
-    }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-fade-in-up { animation: fadeInUp 0.7s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .prose {
+            max-width: 80ch; /* Limit prose width for readability */
+        }
+        .prose p {
+            margin-bottom: 1em;
+        }
+        .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: bold;
+        }
+        .prose ul, .prose ol {
+            margin-bottom: 1em;
+            padding-left: 1.5em;
+        }
+        .prose li {
+            margin-bottom: 0.5em;
+        }
+        .prose-invert {
+            color: #e2e8f0; /* text-slate-200 */
+        }
+        .prose-invert p {
+            color: #cbd5e1; /* text-slate-300 */
+        }
+        .prose-invert h1, .prose-invert h2, .prose-invert h3, .prose-invert h4, .prose-invert h5, .prose-invert h6 {
+            color: #f8fafc; /* text-slate-50 */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 dark:from-gray-950 dark:to-gray-850 text-gray-900 dark:text-gray-100 font-inter transition-colors duration-500">
+    <div id="root"></div>
 
-    function renderGenreDropdown() {
-      const genreList = document.getElementById('genre-dropdown');
-      genreList.innerHTML = '';
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import React, { useState, useEffect, createContext, useContext, useRef, useCallback } from 'https://esm.sh/react@18.2.0';
+        import ReactDOM from 'https://esm.sh/react-dom@18.2.0';
 
-      state.allGenres.forEach(genre => {
-        const genreItem = document.createElement('div');
-        genreItem.className = 'genre-item';
-        genreItem.textContent = genre;
-        genreItem.onclick = () => {
-          document.getElementById('search-input').value = genre;
-          filterCerita(genre);
+        // Global variables provided by the Canvas environment (or default values)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDeiLybtGc6evATj5O7M1FiJd1GPYD-rYc",
+            authDomain: "tamplatedoc.firebaseapp.com",
+            databaseURL: "https://tamplatedoc-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "tamplatedoc",
+            storageBucket: "tamplatedoc.firebasestorage.app",
+            messagingSenderId: "264966107720",
+            appId: "1:264966107720:web:da19f6109e71390740de7d",
+            measurementId: "G-PFK8VQBFCV"
         };
-        genreList.appendChild(genreItem);
-      });
-    }
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    function filterCerita(query) {
-      const q = query.trim().toLowerCase();
-      state.filteredCerita = state.semuaCerita.filter(c =>
-        c.judul.toLowerCase().includes(q) || c.genre.toLowerCase().includes(q)
-      );
-      renderCeritaBatch();
-    }
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-    function renderCeritaBatch() {
-      const grid = document.getElementById("cerita-grid");
-      grid.innerHTML = '';
-      state.filteredCerita.forEach(cerita => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <img src="${cerita.gambarUrl}" alt="Cover ${cerita.judul}">
-          <h2>${cerita.judul}</h2>
-          <div class="genre">${cerita.genre}</div>
-          <div class="rating">⭐ ${cerita.rating.toFixed(1)}</div>
-          <div class="views">👁 ${cerita.views} ${texts[state.currentLang].views}</div>
-          <a href="story.html?id=${cerita.id}" class="read-button">${texts[state.currentLang].read}</a>
-        `;
-        grid.appendChild(card);
-      });
-    }
+        // Auth Context for managing user state globally
+        const AuthContext = createContext(null);
 
-    async function loadCerita() {
-      const snapshot = await firestore.collection("koleksi").get();
-      const ceritaPromises = snapshot.docs.map(async doc => {
-        const data = doc.data();
-        const id = doc.id;
-        const ratingSnap = await realtimeDB.ref(`rating/${id}`).once('value');
-        const viewSnap = await realtimeDB.ref(`cerita/${id}/views`).once('value');
+        // Auth Provider component
+        const AuthProvider = ({ children }) => {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [loadingAuth, setLoadingAuth] = useState(true);
+            const [userId, setUserId] = useState(null);
 
-        return {
-          id,
-          judul: data.judul,
-          genre: data.genre,
-          gambarUrl: data.gambarUrl || '',
-          rating: (ratingSnap.val() && ratingSnap.val().jumlah) || 0,
-          views: viewSnap.val() || 0
+            useEffect(() => {
+                const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        setCurrentUser(user);
+                        setUserId(user.uid);
+                        // Fetch user role from Firestore
+                        const userDocRef = doc(db, "artifacts", appId, "users", user.uid, "profile");
+                        const userDocSnap = await getDoc(userDocRef);
+                        if (!userDocSnap.exists()) {
+                            // Create a basic user profile if it doesn't exist
+                            await setDoc(userDocRef, {
+                                email: user.email,
+                                username: user.displayName || user.email?.split('@')[0] || 'Pengguna Baru',
+                                role: 'author', // Default role
+                                createdAt: serverTimestamp()
+                            });
+                        }
+                    } else {
+                        setCurrentUser(null);
+                        setUserId(null);
+                    }
+                    setLoadingAuth(false);
+                });
+
+                const signInInitialUser = async () => {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Error signing in with custom token or anonymously:", error);
+                    }
+                };
+
+                signInInitialUser();
+
+                return () => unsubscribe();
+            }, []);
+
+            return (
+                React.createElement(AuthContext.Provider, { value: { currentUser, userId, loadingAuth } },
+                    children
+                )
+            );
         };
-      });
-      state.semuaCerita = await Promise.all(ceritaPromises);
-      state.filteredCerita = [...state.semuaCerita];
-      extractGenres(state.semuaCerita);
-      renderCeritaBatch();
-    }
 
-    document.getElementById('search-input').addEventListener('input', debounce((e) => {
-      filterCerita(e.target.value);
-    }, 300));
+        // Custom hook to use AuthContext
+        const useAuth = () => useContext(AuthContext);
 
-    document.getElementById('language-select').addEventListener('change', (e) => {
-      state.currentLang = e.target.value;
-      document.getElementById('logo-text').textContent = texts[state.currentLang].logo;
-      document.getElementById('main-title').textContent = texts[state.currentLang].mainTitle;
-      document.getElementById('search-input').placeholder = texts[state.currentLang].searchPlaceholder;
-      document.getElementById('loading-indicator').textContent = texts[state.currentLang].loading;
-      document.getElementById('tts-warning').textContent = texts[state.currentLang].tts;
-      renderCeritaBatch();
-    });
+        // Utility function to get user role
+        const getUserRole = async (uid) => {
+            if (!uid) return null;
+            const userDocRef = doc(db, "artifacts", appId, "users", uid, "profile");
+            const userDocSnap = await getDoc(userDocRef);
+            return userDocSnap.exists() ? userDocSnap.data().role : null;
+        };
 
-    loadCerita();
-  </script>
+        // Message Modal Component
+        const MessageModal = ({ message, onClose }) => {
+            if (!message) return null;
+            return (
+                React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" },
+                    React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full text-center" },
+                        React.createElement("p", { className: "text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4" }, message),
+                        React.createElement("button", {
+                            onClick: onClose,
+                            className: "px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-300"
+                        }, "OK")
+                    )
+                )
+            );
+        };
+
+        // Confirmation Modal Component
+        const ConfirmationModal = ({ message, onConfirm, onCancel }) => {
+            if (!message) return null;
+            return (
+                React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" },
+                    React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full text-center" },
+                        React.createElement("p", { className: "text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4" }, message),
+                        React.createElement("div", { className: "flex justify-center space-x-4" },
+                            React.createElement("button", {
+                                onClick: onConfirm,
+                                className: "px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-300"
+                            }, "Ya"),
+                            React.createElement("button", {
+                                onClick: onCancel,
+                                className: "px-6 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors duration-300"
+                            }, "Batal")
+                        )
+                    )
+                )
+            );
+        };
+
+        // Login/Register Form Component
+        const AuthForm = ({ onAuthSuccess, onClose }) => {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [whatsappNumber, setWhatsappNumber] = useState(''); // New state for WhatsApp number
+            const [message, setMessage] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setMessage('');
+                try {
+                    if (isLogin) {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    } else {
+                        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                        const userDocRef = doc(db, "artifacts", appId, "users", userCredential.user.uid, "profile");
+                        await setDoc(userDocRef, {
+                            email: email,
+                            username: email.split('@')[0],
+                            role: 'author',
+                            whatsappNumber: whatsappNumber, // Save WhatsApp number
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                    onAuthSuccess();
+                } catch (error) {
+                    setMessage(error.message);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const handleGoogleSignIn = async () => {
+                setIsLoading(true);
+                setMessage('');
+                try {
+                    const provider = new GoogleAuthProvider();
+                    const result = await signInWithPopup(auth, provider);
+                    const userDocRef = doc(db, "artifacts", appId, "users", result.user.uid, "profile");
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (!userDocSnap.exists()) {
+                        await setDoc(userDocRef, {
+                            email: result.user.email,
+                            username: result.user.displayName || result.user.email?.split('@')[0] || 'Pengguna Baru',
+                            role: 'author',
+                            whatsappNumber: whatsappNumber, // Save WhatsApp number for Google sign-in too
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                    onAuthSuccess();
+                } catch (error) {
+                    setMessage(error.message);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" },
+                    React.createElement("div", { className: "bg-white dark:bg-gray-900 p-8 rounded-xl shadow-2xl w-full max-w-md relative animate-fade-in" },
+                        React.createElement("button", {
+                            onClick: onClose,
+                            className: "absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold"
+                        }, "\u00D7"),
+                        React.createElement("h2", { className: "text-3xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100" }, isLogin ? 'Masuk' : 'Daftar'),
+                        React.createElement("form", { onSubmit: handleAuth, className: "space-y-4" },
+                            React.createElement("div", null,
+                                React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "email" }, "Email"),
+                                React.createElement("input", {
+                                    type: "email",
+                                    id: "email",
+                                    className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                    value: email,
+                                    onChange: (e) => setEmail(e.target.value),
+                                    required: true
+                                })
+                            ),
+                            React.createElement("div", null,
+                                React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "password" }, "Kata Sandi"),
+                                React.createElement("input", {
+                                    type: "password",
+                                    id: "password",
+                                    className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                    value: password,
+                                    onChange: (e) => setPassword(e.target.value),
+                                    required: true
+                                })
+                            ),
+                            !isLogin && ( // Only show WhatsApp field if registering
+                                React.createElement("div", null,
+                                    React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "whatsapp" }, "Nomor WhatsApp (Opsional)"),
+                                    React.createElement("input", {
+                                        type: "tel", // Use "tel" for phone numbers
+                                        id: "whatsapp",
+                                        className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                        value: whatsappNumber,
+                                        onChange: (e) => setWhatsappNumber(e.target.value),
+                                        placeholder: "Contoh: +6281234567890"
+                                    })
+                                )
+                            ),
+                            message && React.createElement("p", { className: "text-red-500 text-sm text-center" }, message),
+                            React.createElement("button", {
+                                type: "submit",
+                                className: "w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg transform hover:scale-105",
+                                disabled: isLoading
+                            }, isLoading ? 'Memuat...' : (isLogin ? 'Masuk' : 'Daftar'))
+                        ),
+                        React.createElement("div", { className: "mt-6 text-center" },
+                            React.createElement("button", {
+                                onClick: () => setIsLogin(!isLogin),
+                                className: "text-blue-500 hover:underline text-sm"
+                            }, isLogin ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk')
+                        ),
+                        React.createElement("div", { className: "mt-6 flex items-center justify-center" },
+                            React.createElement("span", { className: "text-gray-500 dark:text-gray-400" }, "Atau")
+                        ),
+                        React.createElement("button", {
+                            onClick: handleGoogleSignIn,
+                            className: "w-full mt-4 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all duration-300 shadow-lg flex items-center justify-center transform hover:scale-105",
+                            disabled: isLoading
+                        },
+                            React.createElement("svg", { className: "w-5 h-5 mr-2", viewBox: "0 0 48 48", fill: "none", xmlns: "http://www.w3.org/2000/svg" },
+                                React.createElement("path", { d: "M43.611 20.083H42V20H24V28H35.031C34.22 31.674 32.067 34.58 29.107 36.5C26.147 38.42 22.519 39.467 18.75 39.467C11.66 39.467 5.753 34.61 3.518 27.604C1.283 20.598 3.09 13.067 8.75 8.75C14.41 4.433 22.16 4.433 27.82 8.75L33.475 3.095C26.79 0.51 18.75 0.51 11.75 3.518C4.75 6.526 -0.003 13.433 -0.003 20.598C-0.003 27.763 4.75 34.67 11.75 37.678C18.75 40.686 26.79 40.686 33.475 38.101L43.611 20.083Z", fill: "#FFC107" }),
+                                React.createElement("path", { d: "M6.306 14.693L11.75 19.006C13.44 14.693 17.51 11.75 22.16 11.75C24.84 11.75 27.35 12.43 29.42 13.68L34.975 8.025C31.75 5.95 27.42 4.75 22.16 4.75C16.89 4.75 12.02 6.75 8.75 10.02C5.48 13.29 4.28 17.62 4.28 22.89L6.306 14.693Z", fill: "#FF3D00" }),
+                                React.createElement("path", { d: "M43.611 20.083L42 20H24V28H35.031C34.22 31.674 32.067 34.58 29.107 36.5C26.147 38.42 22.519 39.467 18.75 39.467C11.66 39.467 5.753 34.61 3.518 27.604C1.283 20.598 3.09 13.067 8.75 8.75C14.41 4.433 22.16 4.433 27.82 8.75L33.475 3.095C26.79 0.51 18.75 0.51 11.75 3.518C4.75 6.526 -0.003 13.433 -0.003 20.598C-0.003 27.763 4.75 34.67 11.75 37.678C18.75 40.686 26.79 40.686 33.475 38.101L43.611 20.083Z", fill: "#4CAF50" }),
+                                React.createElement("path", { d: "M43.611 20.083L42 20H24V28H35.031C34.22 31.674 32.067 34.58 29.107 36.5C26.147 38.42 22.519 39.467 18.75 39.467C11.66 39.467 5.753 34.61 3.518 27.604C1.283 20.598 3.09 13.067 8.75 8.75C14.41 4.433 22.16 4.433 27.82 8.75L33.475 3.095C26.79 0.51 18.75 0.51 11.75 3.518C4.75 6.526 -0.003 13.433 -0.003 20.598C-0.003 27.763 4.75 34.67 11.75 37.678C18.75 40.686 26.79 40.686 33.475 38.101L43.611 20.083Z", fill: "#1976D2" })
+                            ), "Masuk dengan Google")
+                    )
+                )
+            );
+        };
+
+        // Ebook Card Component
+        const EbookCard = ({ ebook }) => {
+            const defaultImageUrl = `https://placehold.co/400x300/3b82f6/ffffff?text=${encodeURIComponent(ebook.title)}`;
+
+            return (
+                React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden border border-gray-200 dark:border-gray-700" },
+                    React.createElement("img", {
+                        src: ebook.imageUrl || defaultImageUrl,
+                        alt: ebook.title,
+                        className: "w-full h-48 object-cover rounded-t-xl",
+                        onError: (e) => { e.target.onerror = null; e.target.src = defaultImageUrl; }
+                    }),
+                    React.createElement("div", { className: "p-4" },
+                        React.createElement("h3", { className: "text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 truncate" }, ebook.title),
+                        React.createElement("p", { className: "text-gray-600 dark:text-gray-400 text-sm mb-3" },
+                            "Oleh: ",
+                            React.createElement("span", null, ebook.author)
+                        ),
+                        React.createElement("div", { className: "flex items-center justify-between text-sm text-gray-700 dark:text-gray-300" },
+                            React.createElement("div", { className: "flex items-center" },
+                                React.createElement("svg", { className: "w-4 h-4 mr-1 text-yellow-500", fill: "currentColor", viewBox: "0 0 20 20" },
+                                    React.createElement("path", { d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.683-1.539 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.565-1.83-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.929 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" })
+                                ),
+                                React.createElement("span", null, ebook.averageRating ? ebook.averageRating.toFixed(1) : 'N/A')
+                            ),
+                            React.createElement("div", { className: "flex items-center" },
+                                React.createElement("svg", { className: "w-4 h-4 mr-1 text-blue-500", fill: "currentColor", viewBox: "0 0 20 20" },
+                                    React.createElement("path", { d: "M10 12a2 2 0 100-4 2 2 0 000 4z" }),
+                                    React.createElement("path", { fillRule: "evenodd", d: "M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z", clipRule: "evenodd" })
+                                ),
+                                React.createElement("span", null, ebook.views || 0)
+                            )
+                        )
+                    )
+                )
+            );
+        };
+
+        // Ebook Detail Page Component
+        const EbookDetail = ({ ebookId, onBack }) => {
+            const { currentUser, userId, loadingAuth } = useAuth();
+            const [ebook, setEbook] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState('');
+            const [userRating, setUserRating] = useState(0);
+            const [message, setMessage] = useState('');
+
+            useEffect(() => {
+                if (!ebookId) {
+                    setError('ID Ebook tidak ditemukan.');
+                    setLoading(false);
+                    return;
+                }
+
+                const ebookDocRef = doc(db, `artifacts/${appId}/public/data/ebooks/${ebookId}`);
+
+                const unsubscribe = onSnapshot(ebookDocRef, async (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        setEbook({ id: docSnap.id, ...data });
+
+                        // Update view count
+                        if (!loadingAuth && userId) {
+                            const viewedUsers = data.viewedUsers || [];
+                            if (!viewedUsers.includes(userId)) {
+                                try {
+                                    await updateDoc(ebookDocRef, {
+                                        views: (data.views || 0) + 1,
+                                        viewedUsers: [...viewedUsers, userId]
+                                    });
+                                } catch (e) {
+                                    console.error("Error updating view count:", e);
+                                }
+                            }
+                        }
+
+                        // Set user's previous rating
+                        if (userId && data.ratings && data.ratings[userId]) {
+                            setUserRating(data.ratings[userId]);
+                        } else {
+                            setUserRating(0);
+                        }
+                    } else {
+                        setError('Ebook tidak ditemukan.');
+                    }
+                    setLoading(false);
+                }, (err) => {
+                    console.error("Error fetching ebook:", err);
+                    setError('Gagal memuat ebook.');
+                    setLoading(false);
+                });
+
+                return () => unsubscribe();
+            }, [ebookId, userId, loadingAuth]);
+
+            const handleRating = async (rating) => {
+                if (!currentUser) {
+                    setMessage('Anda harus login untuk memberi rating.');
+                    return;
+                }
+                if (!ebook) return;
+
+                try {
+                    const ebookDocRef = doc(db, `artifacts/${appId}/public/data/ebooks/${ebook.id}`);
+                    const currentRatings = ebook.ratings || {};
+                    currentRatings[userId] = rating;
+
+                    const totalRatings = Object.values(currentRatings);
+                    const sumRatings = totalRatings.reduce((sum, r) => sum + r, 0);
+                    const newAverageRating = totalRatings.length > 0 ? sumRatings / totalRatings.length : 0;
+
+                    await updateDoc(ebookDocRef, {
+                        ratings: currentRatings,
+                        averageRating: newAverageRating
+                    });
+                    setUserRating(rating);
+                    setMessage('Rating Anda berhasil disimpan!');
+                } catch (e) {
+                    console.error("Error updating rating:", e);
+                    setMessage('Gagal menyimpan rating.');
+                }
+            };
+
+            if (loading) {
+                return React.createElement("div", { className: "flex justify-center items-center h-screen text-gray-900 dark:text-gray-100" }, "Memuat cerita...");
+            }
+
+            if (error) {
+                return (
+                    React.createElement("div", { className: "p-8 text-center text-red-500 dark:text-red-400" },
+                        React.createElement("p", null, error),
+                        React.createElement("button", { onClick: onBack, className: "mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-300" }, "Kembali ke Katalog")
+                    )
+                );
+            }
+
+            if (!ebook) return null;
+
+            const defaultImageUrl = `https://placehold.co/800x600/3b82f6/ffffff?text=${encodeURIComponent(ebook.title)}`;
+
+            return (
+                React.createElement("div", { className: "container mx-auto p-4 md:p-8 bg-white dark:bg-gray-900 rounded-xl shadow-2xl my-8 animate-fade-in" },
+                    React.createElement("button", {
+                        onClick: onBack,
+                        className: "mb-6 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-md"
+                    }, "\u2190 Kembali ke Katalog"),
+                    React.createElement("div", { className: "flex flex-col md:flex-row gap-8" },
+                        React.createElement("div", { className: "md:w-1/3 flex-shrink-0" },
+                            React.createElement("img", {
+                                src: ebook.imageUrl || defaultImageUrl,
+                                alt: ebook.title,
+                                className: "w-full h-auto object-cover rounded-lg shadow-lg mb-4",
+                                onError: (e) => { e.target.onerror = null; e.target.src = defaultImageUrl; }
+                            }),
+                            React.createElement("h1", { className: "text-4xl font-extrabold text-gray-900 dark:text-gray-100 mb-2" }, ebook.title),
+                            React.createElement("p", { className: "text-gray-600 dark:text-gray-400 text-lg mb-4" },
+                                "Oleh: ",
+                                React.createElement("span", { className: "font-semibold" }, ebook.author)
+                            ),
+                            React.createElement("div", { className: "flex items-center mb-4" },
+                                React.createElement("span", { className: "text-yellow-500 text-2xl mr-2" },
+                                    '★'.repeat(Math.round(ebook.averageRating || 0)),
+                                    '☆'.repeat(5 - Math.round(ebook.averageRating || 0))
+                                ),
+                                React.createElement("span", { className: "text-gray-700 dark:text-gray-300 text-xl font-bold" }, ebook.averageRating ? ebook.averageRating.toFixed(1) : 'N/A'),
+                                React.createElement("span", { className: "text-gray-500 dark:text-gray-400 ml-2" },
+                                    "(",
+                                    Object.keys(ebook.ratings || {}).length,
+                                    " rating)"
+                                )
+                            ),
+                            React.createElement("div", { className: "flex items-center text-gray-700 dark:text-gray-300 mb-6" },
+                                React.createElement("svg", { className: "w-6 h-6 mr-2 text-blue-500", fill: "currentColor", viewBox: "0 0 20 20" },
+                                    React.createElement("path", { d: "M10 12a2 2 0 100-4 2 2 0 000 4z" }),
+                                    React.createElement("path", { fillRule: "evenodd", d: "M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z", clipRule: "evenodd" })
+                                ),
+                                React.createElement("span", { className: "text-lg font-semibold" },
+                                    ebook.views || 0,
+                                    " Pembaca"
+                                )
+                            ),
+                            React.createElement("div", { className: "mb-6" },
+                                React.createElement("h3", { className: "text-xl font-bold text-gray-900 dark:text-gray-100 mb-3" }, "Beri Rating Cerita Ini"),
+                                React.createElement("div", { className: "flex space-x-1" },
+                                    [1, 2, 3, 4, 5].map((star) => (
+                                        React.createElement("button", {
+                                            key: star,
+                                            onClick: () => handleRating(star),
+                                            className: `text-4xl transition-colors duration-200 ${
+                                                star <= userRating ? 'text-yellow-500' : 'text-gray-400 dark:text-gray-600'
+                                            } hover:text-yellow-400 focus:outline-none`,
+                                            title: `${star} Bintang`
+                                        }, "\u2605")
+                                    ))
+                                ),
+                                message && React.createElement("p", { className: "mt-2 text-sm text-center text-blue-500 dark:text-blue-400" }, message)
+                            )
+                        ),
+                        React.createElement("div", { className: "md:w-2/3 text-gray-800 dark:text-gray-200 leading-relaxed text-lg" },
+                            React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4" }, "Deskripsi"),
+                            React.createElement("p", { className: "mb-8" }, ebook.description),
+                            React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4" }, "Isi Cerita"),
+                            React.createElement("div", { className: "prose dark:prose-invert max-w-none" },
+                                ebook.content.split('\n').map((paragraph, index) => (
+                                    React.createElement("p", { key: index, className: "mb-4" }, paragraph)
+                                ))
+                            )
+                        )
+                    ),
+                    React.createElement(MessageModal, { message: message, onClose: () => setMessage('') })
+                )
+            );
+        };
+
+        // Add/Edit Story Form Component
+        const StoryForm = ({ ebookToEdit, onSave, onCancel }) => {
+            const { currentUser, userId } = useAuth();
+            const [title, setTitle] = useState(ebookToEdit?.title || '');
+            const [author, setAuthor] = useState(ebookToEdit?.author || currentUser?.displayName || currentUser?.email?.split('@')[0] || '');
+            const [description, setDescription] = useState(ebookToEdit?.description || '');
+            const [content, setContent] = useState(ebookToEdit?.content || '');
+            const [imageUrl, setImageUrl] = useState(ebookToEdit?.imageUrl || '');
+            const [message, setMessage] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!currentUser) {
+                    setMessage('Anda harus login untuk menambahkan/mengedit cerita.');
+                    return;
+                }
+                setIsLoading(true);
+                setMessage('');
+
+                const ebookData = {
+                    title,
+                    author,
+                    description,
+                    content,
+                    imageUrl: imageUrl || `https://placehold.co/400x300/3b82f6/ffffff?text=${encodeURIComponent(title)}`,
+                    updatedAt: serverTimestamp(),
+                    status: 'pending',
+                    views: ebookToEdit?.views || 0,
+                    ratings: ebookToEdit?.ratings || {},
+                    averageRating: ebookToEdit?.averageRating || 0,
+                    viewedUsers: ebookToEdit?.viewedUsers || [],
+                    submittedBy: userId,
+                };
+
+                try {
+                    if (ebookToEdit) {
+                        const ebookDocRef = doc(db, `artifacts/${appId}/public/data/ebooks/${ebookToEdit.id}`);
+                        await updateDoc(ebookDocRef, ebookData);
+                        setMessage('Cerita berhasil diperbarui dan menunggu verifikasi staf!');
+                    } else {
+                        ebookData.createdAt = serverTimestamp();
+                        await addDoc(collection(db, `artifacts/${appId}/public/data/ebooks`), ebookData);
+                        setMessage('Cerita berhasil ditambahkan dan menunggu verifikasi staf!');
+                    }
+                    setTimeout(() => {
+                        onSave();
+                    }, 2000);
+                } catch (error) {
+                    console.error("Error saving story:", error);
+                    setMessage(`Gagal menyimpan cerita: ${error.message}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                React.createElement("div", { className: "container mx-auto p-4 md:p-8 bg-white dark:bg-gray-900 rounded-xl shadow-2xl my-8 animate-fade-in" },
+                    React.createElement("h2", { className: "text-3xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100" }, ebookToEdit ? 'Edit Cerita' : 'Tambah Cerita Baru'),
+                    React.createElement("form", { onSubmit: handleSubmit, className: "space-y-6" },
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "title" }, "Judul Cerita"),
+                            React.createElement("input", {
+                                type: "text",
+                                id: "title",
+                                className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                value: title,
+                                onChange: (e) => setTitle(e.target.value),
+                                required: true
+                            })
+                        ),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "author" }, "Nama Penulis"),
+                            React.createElement("input", {
+                                type: "text",
+                                id: "author",
+                                className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                value: author,
+                                onChange: (e) => setAuthor(e.target.value),
+                                required: true
+                            })
+                        ),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "description" }, "Deskripsi Singkat"),
+                            React.createElement("textarea", {
+                                id: "description",
+                                rows: "3",
+                                className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                value: description,
+                                onChange: (e) => setDescription(e.target.value),
+                                required: true
+                            })
+                        ),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "content" }, "Isi Cerita Lengkap"),
+                            React.createElement("textarea", {
+                                id: "content",
+                                rows: "10",
+                                className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                value: content,
+                                onChange: (e) => setContent(e.target.value),
+                                required: true
+                            })
+                        ),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2", htmlFor: "imageUrl" }, "URL Gambar Sampul (Opsional)"),
+                            React.createElement("input", {
+                                type: "url",
+                                id: "imageUrl",
+                                className: "w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100",
+                                value: imageUrl,
+                                onChange: (e) => setImageUrl(e.target.value),
+                                placeholder: "https://example.com/image.jpg"
+                            })
+                        ),
+                        message && React.createElement("p", { className: "text-center text-blue-500 dark:text-blue-400 text-sm" }, message),
+                        React.createElement("div", { className: "flex justify-end space-x-4" },
+                            React.createElement("button", {
+                                type: "button",
+                                onClick: onCancel,
+                                className: "px-6 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors duration-300 shadow-md"
+                            }, "Batal"),
+                            React.createElement("button", {
+                                type: "submit",
+                                className: "px-6 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-teal-700 transition-all duration-300 shadow-lg transform hover:scale-105",
+                                disabled: isLoading
+                            }, isLoading ? 'Menyimpan...' : (ebookToEdit ? 'Perbarui Cerita' : 'Tambah Cerita'))
+                        )
+                    ),
+                    React.createElement(MessageModal, { message: message, onClose: () => setMessage('') })
+                )
+            );
+        };
+
+        // Staff Dashboard Component
+        const StaffDashboard = ({ onBack }) => {
+            const { currentUser, userId, loadingAuth } = useAuth();
+            const [pendingEbooks, setPendingEbooks] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState('');
+            const [userRole, setUserRole] = useState(null);
+            const [message, setMessage] = useState('');
+
+            useEffect(() => {
+                const fetchRoleAndEbooks = async () => {
+                    if (!loadingAuth && userId) {
+                        const role = await getUserRole(userId);
+                        setUserRole(role);
+
+                        if (role !== 'staff') {
+                            setError('Akses ditolak. Anda bukan staf.');
+                            setLoading(false);
+                            return;
+                        }
+
+                        const q = query(collection(db, `artifacts/${appId}/public/data/ebooks`), where("status", "==", "pending"));
+                        const unsubscribe = onSnapshot(q, (snapshot) => {
+                            const ebooksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            setPendingEbooks(ebooksData);
+                            setLoading(false);
+                        }, (err) => {
+                            console.error("Error fetching pending ebooks:", err);
+                            setError('Gagal memuat cerita yang menunggu verifikasi.');
+                            setLoading(false);
+                        });
+                        return () => unsubscribe();
+                    } else if (!loadingAuth && !userId) {
+                        setError('Anda harus login untuk mengakses dashboard staf.');
+                        setLoading(false);
+                    }
+                };
+
+                fetchRoleAndEbooks();
+            }, [userId, loadingAuth]);
+
+            const handleApprove = async (ebookId) => {
+                try {
+                    const ebookDocRef = doc(db, `artifacts/${appId}/public/data/ebooks/${ebookId}`);
+                    await updateDoc(ebookDocRef, { status: 'approved', updatedAt: serverTimestamp() });
+                    setMessage('Cerita berhasil disetujui!');
+                } catch (e) {
+                    console.error("Error approving ebook:", e);
+                    setMessage('Gagal menyetujui cerita.');
+                }
+            };
+
+            const handleReject = async (ebookId) => {
+                try {
+                    const ebookDocRef = doc(db, `artifacts/${appId}/public/data/ebooks/${ebookId}`);
+                    await updateDoc(ebookDocRef, { status: 'rejected', updatedAt: serverTimestamp() });
+                    setMessage('Cerita berhasil ditolak!');
+                } catch (e) {
+                    console.error("Error rejecting ebook:", e);
+                    setMessage('Gagal menolak cerita.');
+                }
+            };
+
+            if (loading) {
+                return React.createElement("div", { className: "flex justify-center items-center h-screen text-gray-900 dark:text-gray-100" }, "Memuat Dashboard Staf...");
+            }
+
+            if (error) {
+                return (
+                    React.createElement("div", { className: "p-8 text-center text-red-500 dark:text-red-400" },
+                        React.createElement("p", null, error),
+                        React.createElement("button", { onClick: onBack, className: "mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-300" }, "Kembali ke Katalog")
+                    )
+                );
+            }
+
+            if (userRole !== 'staff') {
+                return (
+                    React.createElement("div", { className: "p-8 text-center text-red-500 dark:text-red-400" },
+                        React.createElement("p", null, "Akses ditolak. Anda tidak memiliki izin untuk melihat halaman ini."),
+                        React.createElement("button", { onClick: onBack, className: "mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-300" }, "Kembali ke Katalog")
+                    )
+                );
+            }
+
+            return (
+                React.createElement("div", { className: "container mx-auto p-4 md:p-8 bg-white dark:bg-gray-900 rounded-xl shadow-2xl my-8 animate-fade-in" },
+                    React.createElement("button", {
+                        onClick: onBack,
+                        className: "mb-6 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-md"
+                    }, "\u2190 Kembali ke Katalog"),
+                    React.createElement("h2", { className: "text-3xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100" }, "Dashboard Verifikasi Staf"),
+                    pendingEbooks.length === 0 ? (
+                        React.createElement("p", { className: "text-center text-gray-600 dark:text-gray-400 text-lg" }, "Tidak ada cerita yang menunggu verifikasi.")
+                    ) : (
+                        React.createElement("div", { className: "grid grid-cols-1 gap-6" },
+                            pendingEbooks.map((ebook) => (
+                                React.createElement("div", { key: ebook.id, className: "bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700" },
+                                    React.createElement("h3", { className: "text-xl font-bold text-gray-900 dark:text-gray-100 mb-2" }, ebook.title),
+                                    React.createElement("p", { className: "text-gray-600 dark:text-gray-400 mb-2" },
+                                        "Oleh: ",
+                                        ebook.author
+                                    ),
+                                    React.createElement("p", { className: "text-gray-700 dark:text-gray-300 text-sm mb-4 line-clamp-2" }, ebook.description),
+                                    React.createElement("div", { className: "flex space-x-4" },
+                                        React.createElement("button", {
+                                            onClick: () => handleApprove(ebook.id),
+                                            className: "flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-300 font-semibold"
+                                        }, "Setujui"),
+                                        React.createElement("button", {
+                                            onClick: () => handleReject(ebook.id),
+                                            className: "flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-300 font-semibold"
+                                        }, "Tolak")
+                                    )
+                                )
+                            ))
+                        )
+                    ),
+                    React.createElement(MessageModal, { message: message, onClose: () => setMessage('') })
+                )
+            );
+        };
+
+        // Main App Component
+        function App() {
+            const { currentUser, userId, loadingAuth } = useAuth();
+            const [ebooks, setEbooks] = useState([]);
+            const [loadingEbooks, setLoadingEbooks] = useState(true);
+            const [selectedEbookId, setSelectedEbookId] = useState(null);
+            const [showAuthForm, setShowAuthForm] = useState(false);
+            const [showStoryForm, setShowStoryForm] = useState(false);
+            const [ebookToEdit, setEbookToEdit] = useState(null);
+            const [isDarkTheme, setIsDarkTheme] = useState(false);
+            const [currentPage, setCurrentPage] = useState('catalog');
+            const [userRole, setUserRole] = useState(null);
+            const [message, setMessage] = useState('');
+            const [showConfirmModal, setShowConfirmModal] = useState(false);
+            const [ebookToDeleteId, setEbookToDeleteId] = useState(null);
+
+            const observer = useRef();
+            const lastEbookCardRef = useCallback(node => {
+                if (loadingEbooks) return;
+                if (observer.current) observer.current.disconnect();
+                observer.current = new IntersectionObserver(entries => {
+                    if (entries[0].isIntersecting) {
+                        console.log("Load more ebooks...");
+                    }
+                });
+                if (node) observer.current.observe(node);
+            }, [loadingEbooks]);
+
+            useEffect(() => {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme) {
+                    setIsDarkTheme(savedTheme === 'dark');
+                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    setIsDarkTheme(true);
+                }
+            }, []);
+
+            useEffect(() => {
+                document.documentElement.classList.toggle('dark', isDarkTheme);
+                localStorage.setItem('theme', isDarkTheme ? 'dark' : 'light');
+            }, [isDarkTheme]);
+
+            useEffect(() => {
+                const fetchEbooks = async () => {
+                    if (!loadingAuth) {
+                        setLoadingEbooks(true);
+                        try {
+                            const q = query(collection(db, `artifacts/${appId}/public/data/ebooks`), where("status", "==", "approved"));
+                            const unsubscribe = onSnapshot(q, (snapshot) => {
+                                const ebooksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                                setEbooks(ebooksData);
+                                setLoadingEbooks(false);
+                            }, (err) => {
+                                console.error("Error fetching ebooks:", err);
+                                setMessage('Gagal memuat katalog ebook.');
+                                setLoadingEbooks(false);
+                            });
+                            return () => unsubscribe();
+                        } catch (e) {
+                            console.error("Error setting up ebook listener:", e);
+                            setMessage('Gagal inisialisasi katalog.');
+                            setLoadingEbooks(false);
+                        }
+                    }
+                };
+                fetchEbooks();
+            }, [loadingAuth]);
+
+            useEffect(() => {
+                const fetchUserRole = async () => {
+                    if (!loadingAuth && userId) {
+                        const role = await getUserRole(userId);
+                        setUserRole(role);
+                    } else if (!loadingAuth && !userId) {
+                        setUserRole(null);
+                    }
+                };
+                fetchUserRole();
+            }, [userId, loadingAuth]);
+
+            const handleLoginSuccess = () => {
+                setShowAuthForm(false);
+                setMessage('Berhasil masuk!');
+                setTimeout(() => setMessage(''), 3000);
+            };
+
+            const handleLogout = async () => {
+                try {
+                    await signOut(auth);
+                    setMessage('Berhasil keluar.');
+                    setTimeout(() => setMessage(''), 3000);
+                } catch (error) {
+                    console.error("Error logging out:", error);
+                    setMessage('Gagal keluar.');
+                }
+            };
+
+            const handleAddStoryClick = () => {
+                if (!currentUser) {
+                    setMessage('Anda harus login untuk menambahkan cerita.');
+                    setShowAuthForm(true);
+                    return;
+                }
+                setEbookToEdit(null);
+                setShowStoryForm(true);
+                setCurrentPage('add-edit');
+            };
+
+            const handleEditStoryClick = (ebook) => {
+                if (!currentUser || userId !== ebook.submittedBy) {
+                    setMessage('Anda tidak memiliki izin untuk mengedit cerita ini.');
+                    return;
+                }
+                setEbookToEdit(ebook);
+                setShowStoryForm(true);
+                setCurrentPage('add-edit');
+            };
+
+            const handleDeleteStoryPrompt = (ebookId) => {
+                if (!currentUser) {
+                    setMessage('Anda harus login untuk menghapus cerita.');
+                    return;
+                }
+                setEbookToDeleteId(ebookId);
+                setShowConfirmModal(true);
+            };
+
+            const handleDeleteStoryConfirm = async () => {
+                if (!ebookToDeleteId) return;
+                try {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/ebooks/${ebookToDeleteId}`));
+                    setMessage('Cerita berhasil dihapus.');
+                } catch (error) {
+                    console.error("Error deleting story:", error);
+                    setMessage('Gagal menghapus cerita.');
+                } finally {
+                    setShowConfirmModal(false);
+                    setEbookToDeleteId(null);
+                }
+            };
+
+            const handleDeleteStoryCancel = () => {
+                setShowConfirmModal(false);
+                setEbookToDeleteId(null);
+            };
+
+            const renderPage = () => {
+                switch (currentPage) {
+                    case 'detail':
+                        return React.createElement(EbookDetail, { ebookId: selectedEbookId, onBack: () => { setSelectedEbookId(null); setCurrentPage('catalog'); } });
+                    case 'add-edit':
+                        return React.createElement(StoryForm, { ebookToEdit: ebookToEdit, onSave: () => { setShowStoryForm(false); setCurrentPage('catalog'); setEbookToEdit(null); }, onCancel: () => { setShowStoryForm(false); setCurrentPage('catalog'); setEbookToEdit(null); } });
+                    case 'staff-dashboard':
+                        return React.createElement(StaffDashboard, { onBack: () => setCurrentPage('catalog') });
+                    case 'catalog':
+                    default:
+                        return (
+                            React.createElement("div", { className: "container mx-auto p-4 md:p-8" },
+                                React.createElement("h2", { className: "text-4xl font-extrabold text-center mb-10 text-gray-900 dark:text-gray-100 animate-fade-in-up" }, "Katalog Ebook Open Source"),
+                                loadingEbooks ? (
+                                    React.createElement("div", { className: "flex justify-center items-center h-64 text-gray-900 dark:text-gray-100" }, "Memuat katalog...")
+                                ) : (
+                                    React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" },
+                                        ebooks.map((ebook, index) => (
+                                            React.createElement("div", { key: ebook.id, className: "relative group" },
+                                                React.createElement("button", {
+                                                    onClick: () => { setSelectedEbookId(ebook.id); setCurrentPage('detail'); },
+                                                    className: "block w-full text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                                                },
+                                                    React.createElement(EbookCard, { ebook: ebook })
+                                                ),
+                                                currentUser && userId === ebook.submittedBy && (
+                                                    React.createElement("div", { className: "absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" },
+                                                        React.createElement("button", {
+                                                            onClick: (e) => { e.stopPropagation(); handleEditStoryClick(ebook); },
+                                                            className: "p-2 bg-blue-500 text-white rounded-full shadow-md hover:bg-blue-600 transition-colors",
+                                                            title: "Edit Cerita"
+                                                        },
+                                                            React.createElement("svg", { className: "w-5 h-5", fill: "currentColor", viewBox: "0 0 20 20" }, React.createElement("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-7.586 7.586a1 1 0 00-1 1v2a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 00-1-1h-2z" }))
+                                                        ),
+                                                        React.createElement("button", {
+                                                            onClick: (e) => { e.stopPropagation(); handleDeleteStoryPrompt(ebook.id); },
+                                                            className: "p-2 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors",
+                                                            title: "Hapus Cerita"
+                                                        },
+                                                            React.createElement("svg", { className: "w-5 h-5", fill: "currentColor", viewBox: "0 0 20 20" }, React.createElement("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z", clipRule: "evenodd" }))
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        ))
+                                    )
+                                ),
+                                React.createElement("div", { ref: lastEbookCardRef, style: { height: '20px' } })
+                            )
+                        );
+                }
+            };
+
+            return (
+                React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 dark:from-gray-950 dark:to-gray-850 text-gray-900 dark:text-gray-100 font-inter transition-colors duration-500" },
+                    React.createElement("header", { className: "bg-white dark:bg-gray-900 shadow-md py-4 px-6 flex flex-col md:flex-row justify-between items-center sticky top-0 z-40 rounded-b-xl" },
+                        React.createElement("h1", { className: "text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-purple-400 mb-4 md:mb-0" }, "EbookVerse"),
+                        React.createElement("nav", { className: "flex items-center space-x-4 md:space-x-6" },
+                            React.createElement("button", {
+                                onClick: () => setCurrentPage('catalog'),
+                                className: "text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-purple-400 transition-colors duration-300 font-medium"
+                            }, "Katalog"),
+                            currentUser && (
+                                React.createElement("button", {
+                                    onClick: handleAddStoryClick,
+                                    className: "px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-teal-700 transition-all duration-300 shadow-md"
+                                }, "Tambah Cerita")
+                            ),
+                            userRole === 'staff' && (
+                                React.createElement("button", {
+                                    onClick: () => setCurrentPage('staff-dashboard'),
+                                    className: "px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300 shadow-md"
+                                }, "Dashboard Staf")
+                            ),
+                            React.createElement("button", {
+                                onClick: () => setIsDarkTheme(!isDarkTheme),
+                                className: "p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300",
+                                title: isDarkTheme ? 'Ganti ke Tema Terang' : 'Ganti ke Tema Gelap'
+                            },
+                                isDarkTheme ? (
+                                    React.createElement("svg", { className: "w-6 h-6", fill: "currentColor", viewBox: "0 0 20 20" }, React.createElement("path", { d: "M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" }))
+                                ) : (
+                                    React.createElement("svg", { className: "w-6 h-6", fill: "currentColor", viewBox: "0 0 20 20" }, React.createElement("path", { d: "M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 4a1 1 0 01.707 1.707l-.707.707a1 1 0 11-1.414-1.414l.707-.707A1 1 0 0114 4zm-4 8a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-4-4a1 1 0 01.707.293l-.707.707a1 1 0 11-1.414-1.414l.707-.707A1 1 0 016 4zm10 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-4-4a1 1 0 01.707 1.707l-.707.707a1 1 0 11-1.414-1.414l.707-.707A1 1 0 0114 4z" }), React.createElement("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z", clipRule: "evenodd" }))
+                                )
+                            ),
+                            loadingAuth ? (
+                                React.createElement("span", { className: "text-gray-500 dark:text-gray-400" }, "Memuat...")
+                            ) : currentUser ? (
+                                React.createElement(React.Fragment, null,
+                                    React.createElement("span", { className: "text-gray-700 dark:text-gray-300 text-sm md:text-base" },
+                                        "Halo, ",
+                                        currentUser.displayName || currentUser.email?.split('@')[0] || 'Pengguna',
+                                        " (",
+                                        userId?.substring(0, 6),
+                                        "...)"
+                                    ),
+                                    React.createElement("button", {
+                                        onClick: handleLogout,
+                                        className: "px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors duration-300 shadow-md"
+                                    }, "Keluar")
+                                )
+                            ) : (
+                                React.createElement("button", {
+                                    onClick: () => setShowAuthForm(true),
+                                    className: "px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors duration-300 shadow-md"
+                                }, "Masuk / Daftar")
+                            )
+                        )
+                    ),
+                    React.createElement("main", { className: "py-8" }, renderPage()),
+                    React.createElement("footer", { className: "bg-gray-800 dark:bg-gray-900 text-white py-6 text-center rounded-t-xl" },
+                        React.createElement("p", null, "\u00A9 ", new Date().getFullYear(), " EbookVerse. Dibuat dengan \u2764\uFE0F untuk komunitas."),
+                        React.createElement("p", { className: "text-sm mt-2" },
+                            React.createElement("a", { href: "#", className: "text-blue-400 hover:underline" }, "Kebijakan Privasi"),
+                            " | ",
+                            React.createElement("a", { href: "#", className: "text-blue-400 hover:underline" }, "Syarat Layanan")
+                        )
+                    ),
+                    showAuthForm && React.createElement(AuthForm, { onAuthSuccess: handleLoginSuccess, onClose: () => setShowAuthForm(false) }),
+                    React.createElement(MessageModal, { message: message, onClose: () => setMessage('') }),
+                    showConfirmModal && (
+                        React.createElement(ConfirmationModal, {
+                            message: "Apakah Anda yakin ingin menghapus cerita ini? Tindakan ini tidak dapat dibatalkan.",
+                            onConfirm: handleDeleteStoryConfirm,
+                            onCancel: handleDeleteStoryCancel
+                        })
+                    )
+                )
+            );
+        }
+
+        // Wrap the App with AuthProvider
+        function WrappedApp() {
+            return (
+                React.createElement(AuthProvider, null,
+                    React.createElement(App, null)
+                )
+            );
+        }
+
+        // Render the app
+        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(WrappedApp, null));
+    </script>
 </body>
 </html>
